@@ -8,7 +8,7 @@ EXTRA_DATA = u'~' * (BUFFER_LENGTH - 1)
 
 
 def client(msg):
-    """Start a client looking for a connection at ('127.0.0.1', 5000)."""
+    """Start a client looking for a connection at listening server."""
     infos = socket.getaddrinfo(*ADDRINFO)
     stream_info = [i for i in infos if i[1] == socket.SOCK_STREAM][0]
     cli_sock = socket.socket(*stream_info[:3])
