@@ -2,8 +2,9 @@
 """Client module to communicate with server module."""
 import sys
 import socket
-from server import BUFFER_LENGTH, ADDRINFO
+from server import BUFFER_LENGTH
 
+ADDRINFO = ('127.0.0.1', 5000, 2, 1, 6)
 EXTRA_DATA = u'~' * (BUFFER_LENGTH - 1)
 
 
