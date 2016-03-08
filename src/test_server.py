@@ -8,6 +8,7 @@ TESTS = [
     'aaaaaaaaaaaaaaaaaaaaaaa',
     'aa',
     'a' * BUFFER_LENGTH,
+    u'£©°',
 ]
 
 

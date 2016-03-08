@@ -4,7 +4,7 @@ import sys
 import socket
 from server import BUFFER_LENGTH, ADDRINFO
 
-EXTRA_DATA = '~' * (BUFFER_LENGTH - 1)
+EXTRA_DATA = u'~' * (BUFFER_LENGTH - 1)
 
 
 def client(msg):
