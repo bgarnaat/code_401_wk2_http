@@ -23,12 +23,12 @@ def server():
                 # conn.sendall(part)
                 if len(part) < BUFFER_LENGTH:
                     break
-            sys.stdout.write('Request received:\n')
-            sys.stdout.write(req.decode('utf-8'))
+            print('Request received:')
+            print(req.decode('utf-8'))
             conn.sendall(response_ok())
             conn.close()
     except KeyboardInterrupt:
-        sys.stdout.write('\nShutting down the server...')
+        print('\nShutting down the server...\n')
         serv_sock.close()
         sys.exit()
 
