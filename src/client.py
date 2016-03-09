@@ -2,9 +2,9 @@
 """Client module to communicate with server module."""
 import sys
 import socket
-from server import BUFFER_LENGTH, ADDRINFO
+from server import BUFFER_LENGTH
 
-EXTRA_DATA = u'~' * (BUFFER_LENGTH - 1)
+ADDRINFO = ('127.0.0.1', 5000, 2, 1, 6)
 
 
 def client(msg):
@@ -14,10 +14,8 @@ def client(msg):
     cli_sock = socket.socket(*stream_info[:3])
     cli_sock.connect(stream_info[-1])
 
-    if not len(msg) % BUFFER_LENGTH:
-        msg = msg + EXTRA_DATA
-
     cli_sock.sendall(msg.encode('utf8'))
+    cli_sock.shutdown(socket.SHUT_WR)
     response = ''
     while True:
         part = cli_sock.recv(BUFFER_LENGTH)
@@ -25,7 +23,7 @@ def client(msg):
         if len(part) < BUFFER_LENGTH:
             break
     cli_sock.close()
-    return response.strip(EXTRA_DATA)
+    return response
 
 
 if __name__ == '__main__':
