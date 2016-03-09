@@ -16,16 +16,35 @@ def server():
         while True:
             serv_sock.listen(1)
             conn, addr = serv_sock.accept()
+            req = b''
             while True:
                 part = conn.recv(BUFFER_LENGTH)
-                conn.sendall(part)
+                req += part
+                # conn.sendall(part)
                 if len(part) < BUFFER_LENGTH:
                     break
+            sys.stdout.write('Request received:\n')
+            sys.stdout.write(req.decode('utf-8'))
+            conn.sendall(response_ok())
             conn.close()
     except KeyboardInterrupt:
-        print('\nShutting down the server...')
+        sys.stdout.write('\nShutting down the server...')
         serv_sock.close()
         sys.exit()
+
+
+def response_ok():
+    """Return 'HTTP/1.1 200 OK' for when connection ok."""
+    return (b'HTTP/1.1 200 OK\r\n'
+            b'Content-Type: text/plain\r\n\r\n'
+            b'Welcome to Imperial Space, rebel scum.\n|-o-| <-o-> |-o-|')
+
+
+def response_error():
+    """Return 'Internal Server Error' for when problem occurs."""
+    return (b'HTTP/1.1 500 Internal Server Error\r\n'
+            b'Content-Type: text/plain\r\n\r\n'
+            b'Death Star Error.  Please build again.')
 
 
 if __name__ == '__main__':
