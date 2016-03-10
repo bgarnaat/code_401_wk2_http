@@ -53,6 +53,15 @@ def server():
         sys.exit()
 
 
+def parse_request(request):
+    # only accept GET
+    # only HTTP/1.1
+    # validate that proper Host: header was specified
+    # other requests raise appropriate Python error
+    # if no conditions arise, should return the URI
+    pass
+
+
 def response_ok():
     """Return 'HTTP/1.1 200 OK' for when connection ok."""
     return (b'HTTP/1.1 200 OK\r\n'

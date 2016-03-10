@@ -12,6 +12,34 @@ TESTS = [
     u'£©°',
 ]
 
+GOOD_REQUEST = (b'GET /index.html HTTP/1.1\r\n'
+                b'Host: theempire.com\r\n'
+                b'\r\n')
+
+
+BAD_NOT_GET = (b'POST /index.html HTTP/1.1\r\n'
+               b'Host: theempire.com\r\n'
+               b'\r\n')
+
+BAD_NO_HOST = (b'POST /index.html HTTP/1.1\r\n'
+               b'\r\n')
+
+BAD_NO_PROTO = (b'GET /index.html\r\n'
+                b'Host: theempire.com\r\n'
+                b'\r\n')
+
+BAD_WRONG_PROTO = (b'GET /index.html HTTP/1.0\r\n'
+                   b'Host: theempire.com\r\n'
+                   b'\r\n')
+
+TEST_PARSE = [
+    (),
+    (),
+    (),
+    (),
+
+]
+
 
 # @pytest.mark.parametrize('msg', TESTS)
 # def test_system(msg):
@@ -28,6 +56,15 @@ def test_system(msg):
     response_parts = response.split('\r\n')
     assert response_parts[0] == HTTP_200_OK.decode('utf-8')
     assert '' in response_parts
+
+
+@pytest.mark.parametrize('request, error, uri', TEST_PARSE)
+def test_parse_request(request, error, uri):
+    """Test that parse_request returns the URI or a raises appropriate error."""
+    pass
+
+    with pytest.raises(error):
+        pass
 
 
 def test_response_ok():
