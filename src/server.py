@@ -19,37 +19,35 @@ ADDRINFO = ('127.0.0.1', 5000)
 
 def server():
     """Start a server using a socket at server.ADDRINFO."""
-    # TODO: explicitly state keyword args initializing socket.socket()
-    serv_sock = socket.socket(proto=socket.IPPROTO_TCP)
-    # TODO:
-    # use socket.setsockopt to allow to re-use server right away
-    #   instead of waiting to use same IP/port again
+    serv_sock = socket.socket(socket.AF_INET,
+                              socket.SOCK_STREAM,
+                              socket.IPPROTO_TCP)
+
+    serv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serv_sock.bind(ADDRINFO)
+    serv_sock.listen(1)
     try:
         while True:
-            # TODO: move this outside while loop
-            # This just sets the max number of connections this server
-            #   can talk to simultaneously
-            serv_sock.listen(1)
             conn, addr = serv_sock.accept()
-
-            # TODO: Build a list instead and then use the b''.join() method
-            req = b''
+            request = []
             while True:
                 part = conn.recv(BUFFER_LENGTH)
-                req += part
+                request.append(part)
                 # conn.sendall(part)
                 if len(part) < BUFFER_LENGTH:
                     break
+            request = b''.join(request)
             print('Request received:')
-            print(req.decode('utf-8'))
+            print(request.decode('utf-8'))
             conn.sendall(response_ok())
             conn.close()
     except KeyboardInterrupt:
-        # TODO: find a way to see if conn is an existing name
-        #   if so, close.
-        # try conn.close()/except name error
-        # move server shutdown to finally statement - always shutdown
+        pass
+    finally:
+        try:
+            conn.close()
+        except NameError:
+            pass
         print('\nShutting down the server...\n')
         serv_sock.close()
         sys.exit()
