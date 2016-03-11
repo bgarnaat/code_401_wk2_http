@@ -40,7 +40,7 @@ TEST_PARSE = [
     (BAD_NOT_GET, ValueError, ERR_405, b''),
     (BAD_NO_HOST, ValueError, ERR_400, b''),
     (BAD_NO_PROTO, ValueError, ERR_400, b''),
-    (BAD_WRONG_PROTO, ValueError, ERR_400, b''),
+    (BAD_WRONG_PROTO, ValueError, ERR_505, b''),
     (BAD_NO_CRLF, ValueError, ERR_400, b''),
 ]
 
@@ -52,27 +52,25 @@ TEST_PARSE = [
 #     assert client(msg) == msg
 
 
-@pytest.mark.parametrize('msg', TESTS)
-def test_system(msg):
-    """Test that messages to server are returned as the same message."""
-    from client import client
-    response = client(msg)
-    response_parts = response.split('\r\n')
-    assert response_parts[0] == HTTP_200_OK.decode('utf-8')
-    assert '' in response_parts
+# @pytest.mark.parametrize('msg', TESTS)
+# def test_system(msg):
+#     """Test that messages to server are returned as the same message."""
+#     from client import client
+#     response = client(msg)
+#     response_parts = response.split('\r\n')
+#     assert response_parts[0] == HTTP_200_OK.decode('utf-8')
+#     assert '' in response_parts
 
 
-@pytest.mark.parametrize('cli_request, error, code, reason, uri', TEST_PARSE)
-def test_parse_request(cli_request, error, code, reason, uri):
+@pytest.mark.parametrize('cli_request, error, msg, uri', TEST_PARSE)
+def test_parse_request(cli_request, error, msg, uri):
     """Test that parse_request returns the URI or raises appropriate error."""
     from server import parse_request
 
     if error:
         with pytest.raises(error) as e:
             parse_request(cli_request)
-            code, reason = e.msg.split(': ')
-            assert e.code == code
-            assert e.reason == reason
+            assert e.args[0] == msg
     else:
         assert parse_request(cli_request) == uri
 

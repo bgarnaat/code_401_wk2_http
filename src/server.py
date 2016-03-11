@@ -3,8 +3,8 @@
 import sys
 import socket
 
+ERR_400 = b'400: Bad Request'
 ERR_405 = b'405: Method Not Allowed'
-ERR_405 = b'400: Bad Request'
 ERR_505 = b'505: HTTP Version Not Supported'
 BUFFER_LENGTH = 8
 ADDRINFO = ('127.0.0.1', 5000)
@@ -73,11 +73,11 @@ def parse_request(request):
     try:
         method, uri, protocol = first_line.split()
     except ValueError:
-        raise ValueError(b'400: Bad Request')
+        raise ValueError(ERR_400)
     if method != b'GET':
-        raise ValueError(b'405: Bad Request')
+        raise ValueError(ERR_405)
     if protocol != b'HTTP/1.1':
-        raise ValueError(b'400: Bad Request')
+        raise ValueError(ERR_505)
     return uri
 
 
