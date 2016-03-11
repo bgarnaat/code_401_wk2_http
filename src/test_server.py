@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test module for client and server modules."""
 import pytest
-from server import BUFFER_LENGTH
+from server import BUFFER_LENGTH, ERR_400, ERR_405, ERR_505
 
 HTTP_200_OK = b'HTTP/1.1 200 OK'
 
@@ -32,12 +32,16 @@ BAD_WRONG_PROTO = (b'GET /index.html HTTP/1.0\r\n'
                    b'Host: theempire.com\r\n'
                    b'\r\n')
 
-TEST_PARSE = [
-    (),
-    (),
-    (),
-    (),
+BAD_NO_CRLF = (b'GET /index.html HTTP/1.0\r\n'
+               b'Host: theempire.com\r\n')
 
+TEST_PARSE = [
+    (GOOD_REQUEST, None, b'', b'/index.html'),
+    (BAD_NOT_GET, ValueError, ERR_405, b''),
+    (BAD_NO_HOST, ValueError, ERR_400, b''),
+    (BAD_NO_PROTO, ValueError, ERR_400, b''),
+    (BAD_WRONG_PROTO, ValueError, ERR_400, b''),
+    (BAD_NO_CRLF, ValueError, ERR_400, b''),
 ]
 
 
@@ -58,13 +62,19 @@ def test_system(msg):
     assert '' in response_parts
 
 
-@pytest.mark.parametrize('request, error, uri', TEST_PARSE)
-def test_parse_request(request, error, uri):
-    """Test that parse_request returns the URI or a raises appropriate error."""
-    pass
+@pytest.mark.parametrize('cli_request, error, code, reason, uri', TEST_PARSE)
+def test_parse_request(cli_request, error, code, reason, uri):
+    """Test that parse_request returns the URI or raises appropriate error."""
+    from server import parse_request
 
-    with pytest.raises(error):
-        pass
+    if error:
+        with pytest.raises(error) as e:
+            parse_request(cli_request)
+            code, reason = e.msg.split(': ')
+            assert e.code == code
+            assert e.reason == reason
+    else:
+        assert parse_request(cli_request) == uri
 
 
 def test_response_ok():
