@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test module for client and server modules."""
 import pytest
-from server import BUFFER_LENGTH
+from server import BUFFER_LENGTH, ERR_400, ERR_405, ERR_505
 
 HTTP_200_OK = b'HTTP/1.1 200 OK'
 
@@ -10,6 +10,38 @@ TESTS = [
     'aa',
     'a' * BUFFER_LENGTH,
     u'£©°',
+]
+
+GOOD_REQUEST = (b'GET /index.html HTTP/1.1\r\n'
+                b'Host: theempire.com\r\n'
+                b'\r\n')
+
+
+BAD_NOT_GET = (b'POST /index.html HTTP/1.1\r\n'
+               b'Host: theempire.com\r\n'
+               b'\r\n')
+
+BAD_NO_HOST = (b'POST /index.html HTTP/1.1\r\n'
+               b'\r\n')
+
+BAD_NO_PROTO = (b'GET /index.html\r\n'
+                b'Host: theempire.com\r\n'
+                b'\r\n')
+
+BAD_WRONG_PROTO = (b'GET /index.html HTTP/1.0\r\n'
+                   b'Host: theempire.com\r\n'
+                   b'\r\n')
+
+BAD_NO_CRLF = (b'GET /index.html HTTP/1.0\r\n'
+               b'Host: theempire.com\r\n')
+
+TEST_PARSE = [
+    (GOOD_REQUEST, None, b'', b'/index.html'),
+    (BAD_NOT_GET, ValueError, ERR_405, b''),
+    (BAD_NO_HOST, ValueError, ERR_400, b''),
+    (BAD_NO_PROTO, ValueError, ERR_400, b''),
+    (BAD_WRONG_PROTO, ValueError, ERR_400, b''),
+    (BAD_NO_CRLF, ValueError, ERR_400, b''),
 ]
 
 
@@ -28,6 +60,21 @@ def test_system(msg):
     response_parts = response.split('\r\n')
     assert response_parts[0] == HTTP_200_OK.decode('utf-8')
     assert '' in response_parts
+
+
+@pytest.mark.parametrize('cli_request, error, code, reason, uri', TEST_PARSE)
+def test_parse_request(cli_request, error, code, reason, uri):
+    """Test that parse_request returns the URI or raises appropriate error."""
+    from server import parse_request
+
+    if error:
+        with pytest.raises(error) as e:
+            parse_request(cli_request)
+            code, reason = e.msg.split(': ')
+            assert e.code == code
+            assert e.reason == reason
+    else:
+        assert parse_request(cli_request) == uri
 
 
 def test_response_ok():
