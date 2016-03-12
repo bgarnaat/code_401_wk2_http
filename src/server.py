@@ -8,15 +8,29 @@ import socket
 import sys
 import time
 
-OK_200 = b'200 OK'
-ERR_400 = b'400: Bad Request'
-ERR_404 = b'404: Not Found'
-ERR_405 = b'405: Method Not Allowed'
-ERR_505 = b'505: HTTP Version Not Supported'
 BUFFER_LENGTH = 8
 ADDRINFO = ('127.0.0.1', 5000)
-WEBROOT_PATH = os.path.join(b'..', b'webroot')
-HTML_TEMPLATE = b'''
+WEBROOT_PATH = os.path.join('..', 'webroot')
+
+# Unicode constants for standard re-usable parts.
+CRLF = '\r\n'
+GET = 'GET'
+HTTP1_1 = 'HTTP/1.1'
+HOST = 'Host: '
+CONTENT_TYPE = 'Content-Type: {}'
+CONTENT_LENGTH = 'Content-Length: {}'
+
+# Easy Reference dictionary with int keys for code/message part.
+HTTP_CODES = {
+    200: '200 OK',
+    400: '400 Bad Request',
+    404: '404 Not Found',
+    405: '405 Method Not Allowed',
+    505: '505 HTTP Version Not Supported',
+}
+
+# updated HTML templates to use unicode strings
+HTML_TEMPLATE = '''
                 <!DOCTYPE html>
                 <html>
                   <head>
@@ -24,25 +38,16 @@ HTML_TEMPLATE = b'''
                     <title></title>
                   </head>
                   <body>
-                    <h3>%s</h3>
+                    <h3>{header}</h3>
                     <ul>
-                      %s
+                      {list_items}
                     </ul>
                   </body>
                 </html>
                 '''
-HTML_LI_TEMPLATE = b'''
-                   <li><a href="%s">%s</a></li>
+HTML_LI_TEMPLATE = '''
+                   <li><a href="{uri_path}">{uri_path}</a></li>
                    '''
-
-
-# TODO: update response assemble and tests for more sophisticated
-#   testing of each component. Assert for required parts while disrgarding
-#   optional components (but making sure they are in the right place).
-#   split on \r\n\r\n assert there are 2 pieces
-#   for first line of response, use maxsplit arg to split
-#   e.g. "HTTP/1.1 500 Internal Server Error".split(' ', maxsplit=2)
-#   >>> ["HTTP/1.1", "500", "Internal Server Error"]
 
 
 def server():
@@ -57,28 +62,32 @@ def server():
     try:
         while True:
             conn, addr = serv_sock.accept()
-            request = []
+            request_parts = []
             while True:
                 part = conn.recv(BUFFER_LENGTH)
-                request.append(part)
-                # conn.sendall(part)
+                request_parts.append(part)
                 if len(part) < BUFFER_LENGTH:
                     break
-            request = b''.join(request)
-            print('Request received:')
-            print(request.decode('utf-8'))
+            # Immediately decode all of incoming request into unicode.
+            # In future, may need to check Content-type of incoming request?
+            request = b''.join(request_parts).decode('utf-8')
+            print('Request received:\n{}'.format(request))
             try:
                 uri = parse_request(request)
                 body, body_type = resolve_uri(uri)
+                # Here body might be HTML/text or image bytes.
                 body_length = len(body)
-                response = response_ok(body, body_type, body_length)
+                response = response_ok(body_type, body_length)
+
             except ValueError as e:
                 response = response_error(*e.args)
+            # Only re-encode into bytes on the way out.
+            response = response.encode('utf-8') + body
             conn.sendall(response)
             conn.close()
             time.sleep(0.01)
-    except KeyboardInterrupt:
-        pass
+    except Exception as e:
+        print(e.msg)
     finally:
         try:
             conn.close()
@@ -96,38 +105,38 @@ def parse_request(request):
     # validate that proper Host: header was specified
     # other requests raise appropriate Python error
     # if no conditions arise, should return the URI
-    method = b''
-    uri = b''
-    protocol = b''
-    headers = b''
+    method = ''
+    uri = ''
+    protocol = ''
+    headers = ''
 
     try:
-        headers, body = request.split(b'\r\n\r\n')
+        headers, body = request.split(CRLF * 2)
     except ValueError:
-        raise ValueError(ERR_400)
+        raise ValueError(400)
 
     try:
-        headers = headers.split(b'\r\n')
+        headers = headers.split(CRLF)
         first_line = headers[0]
     except (ValueError, IndexError):
-        raise ValueError(ERR_400)
+        raise ValueError(400)
 
     try:
         method, uri, protocol = first_line.split()
     except ValueError:
-        raise ValueError(ERR_400)
+        raise ValueError(400)
 
     headers = headers[1:]
     for h in headers:
-        if h.startswith(b'Host: '):
+        if h.startswith(HOST):
             break
     else:
-        raise ValueError(ERR_400)
+        raise ValueError(400)
 
-    if method != b'GET':
-        raise ValueError(ERR_405)
-    if protocol != b'HTTP/1.1':
-        raise ValueError(ERR_505)
+    if method != GET:
+        raise ValueError(405)
+    if protocol != HTTP1_1:
+        raise ValueError(505)
 
     return uri
 
@@ -163,26 +172,31 @@ def resolve_uri(uri):
         body = display(next(os.walk(uri)))
         print(u'body:', type(body))
     else:
-        raise ValueError(ERR_404)
+        raise ValueError(404)
     return (body, body_type)
 
 
-def response_ok(body, body_type, body_length):
+# response_ok doesn't parse body (might be bytes as for an image).
+# References key 200 from HTTP_CODES reference dictionary.
+def response_ok(body_type, body_length):
     """Return 'HTTP/1.1 200 OK' for when connection ok."""
-    return (b'HTTP/1.1 %s\r\n'
-            b'Content-Type: %s\r\n'
-            b'Content-Length: %i\r\n'
-            b'\r\n'
-            b'%s') % (OK_200, body_type, body_length, body)
+    return CRLF.join([' '.join([HTTP1_1, HTTP_CODES[200]]),
+                     CONTENT_TYPE.format(body_type),
+                     CONTENT_LENGTH.format(body_length),
+                     CRLF])
 
 
-def response_error(err_msg):
+# response_error take an int as err_code, to reference HTTP_CODES dict.
+def response_error(err_code):
     """Return 'Internal Server Error' for when problem occurs."""
-    return (b'HTTP/1.1 %s\r\n'
-            b'Content-Type: text/plain\r\n'
-            b'\r\n'
-            b'Death Star Error.  Please build again.\n'
-            b'%s\r\n') % (err_msg, err_msg)
+    return CRLF.join([' '.join([HTTP1_1, HTTP_CODES[err_code]]),
+                     CONTENT_TYPE.format('text/plain'),
+                     CRLF])
+    # return (b'HTTP/1.1 %s\r\n'
+    #         b'Content-Type: text/plain\r\n'
+    #         b'\r\n'
+    #         b'Death Star Error.  Please build again.\n'
+    #         b'%s\r\n') % (err_msg, err_msg)
 
 
 def display(threeple):
