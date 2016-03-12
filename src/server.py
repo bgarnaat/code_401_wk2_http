@@ -146,6 +146,7 @@ def resolve_uri(uri):
         body_type = mimetypes.guess_type(uri.decode('utf-8'))
         print(u'body_type:', body_type)
         body_type = body_type[0].encode('utf-8')
+        print(u'body_type:', body_type)
 
     elif os.path.isdir(uri):
         body_type = b'text/html'
