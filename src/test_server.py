@@ -74,6 +74,11 @@ ERR_LIST = [
 ]
 
 
+SAMPLE_TXT = (u'This is a very simple text file.\n'
+              u'Just to show that we can serve it up.\n'
+              u'It is three lines long.\n')
+
+
 # @pytest.mark.parametrize('msg', TESTS)
 # def test_system(msg):
 #     """Test that messages to server are returned as the same message."""
@@ -116,3 +121,15 @@ def test_response_error(err_msg):
     from server import response_error
     error_text = b'HTTP/1.1 %s' % err_msg
     assert response_error(err_msg).split(b'\r\n')[0] == error_text
+
+
+def test_webroot():
+    """Test that webroot is accessible."""
+    from server import WEBROOT_PATH
+    from os.path import join
+    import io
+    sample_path = join(WEBROOT_PATH, 'sample.txt')
+    f = io.open(sample_path, 'r')
+    words = f.read()
+    f.close()
+    assert words == SAMPLE_TXT
