@@ -207,16 +207,8 @@ def response_error(err_code):
 
 def display(threeple):
     """Split dir threeple into components and return as HTML."""
-    print(u'Entering Display...')
-
-    print(u'threeple:', threeple)
     cur_dir, dir_subdir, dir_files = threeple
-    print(u'cur_dir:', cur_dir)
-    print(u'dir_subdir:', dir_subdir)
-    print(u'dir_files:', dir_files)
-
     cur_dir = web_uri(cur_dir)
-    print('cur_dir after web_dir', cur_dir)
     dir_list = []
     for i in dir_subdir + dir_files:
         full_path = os.path.join(cur_dir, i)

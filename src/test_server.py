@@ -153,9 +153,9 @@ def test_response_error(err_code):
 
 def test_join_uri(uri):
     """Test that webroot is accessible."""
-    from server import join_uri
+    from server import full_uri
     uri_in, code, uri_out = uri
-    assert join_uri(uri_in).endswith(uri_out)
+    assert full_uri(uri_in).endswith(uri_out)
 
 
 def test_resolve_uri():
@@ -164,11 +164,8 @@ def test_resolve_uri():
 
 def test_webroot():
     """Test that webroot is accessible."""
-    from server import WEBROOT_PATH
+    from server import WEBROOT_PATH, read_file_bytes
     from os.path import join
-    import io
     sample_path = join(WEBROOT_PATH, 'sample.txt')
-    f = io.open(sample_path, 'r')
-    words = f.read()
-    f.close()
-    assert words == SAMPLE_TXT
+    data = read_file_bytes(sample_path)
+    assert data.decode('utf-8') == SAMPLE_TXT
