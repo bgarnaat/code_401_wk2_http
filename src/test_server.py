@@ -104,9 +104,9 @@ def make_request(method, uri, proto, headers, empty_line, body):
 ERR_CODES = [n for n in HTTP_CODES.keys() if n >= 400]
 
 
-SAMPLE_TXT = ('This is a very simple text file.\n'
-              'Just to show that we can serve it up.\n'
-              'It is three lines long.\n')
+SAMPLE_TXT = ('This is a very simple text file.\r\n'
+              'Just to show that we can serve it up.\r\n'
+              'It is three lines long.\r\n')
 
 
 # @pytest.mark.parametrize('cli_request, msg', TEST_CLI_REQUEST)
