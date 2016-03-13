@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test module for client and server modules."""
+import os
 import pytest
 import server as ser
-from server import CRLF, HTTP1_1, HTTP_CODES, BUFFER_LENGTH
+from server import CRLF, HTTP1_1, HTTP_CODES, TEXT_HTML, TEXT_PLAIN
 
+WEBROOT_STUB = '/http-server/webroot/'
 
 METHODS = [
     ('GET', 200),
@@ -13,9 +15,12 @@ METHODS = [
 ]
 
 URIS = [
-    ('/', 200),
-    ('index.html', 200),
-    ('', 400),
+    ('/', 200, WEBROOT_STUB),
+    ('/a_web_page.html', 200, os.path.join(WEBROOT_STUB, '/a_web_page.html')),
+    ('/images', 200, os.path.join(WEBROOT_STUB, '/images')),
+    ('/images/sample_1.png', 200, os.path.join(WEBROOT_STUB,
+                                               '/images/sample_1.png')),
+    ('', 400, ''),
 ]
 
 PROTOS = [
@@ -96,45 +101,12 @@ def make_request(method, uri, proto, headers, empty_line, body):
     return (request, expected_code, error, uri[0])
 
 
-# U_G_R = u'{}'.format(GOOD_REQUEST.decode('utf-8'))
-# U_BNG = u'{}'.format(BAD_NOT_GET.decode('utf-8'))
-# U_BNH = u'{}'.format(BAD_NO_HOST.decode('utf-8'))
-# U_BNP = u'{}'.format(BAD_NO_PROTO.decode('utf-8'))
-# U_BWP = u'{}'.format(BAD_WRONG_PROTO.decode('utf-8'))
-# U_BNC = u'{}'.format(BAD_NO_CRLF.decode('utf-8'))
-
-TEST_PARSE = [
-    # (GOOD_REQUEST, None, OK_200, b'/index.html'),
-    # (BAD_NOT_GET, ValueError, ERR_405, b''),
-    # (BAD_NO_HOST, ValueError, ERR_400, b''),
-    # (BAD_NO_PROTO, ValueError, ERR_400, b''),
-    # (BAD_WRONG_PROTO, ValueError, ERR_505, b''),
-    # (BAD_NO_CRLF, ValueError, ERR_400, b''),
-]
-
-TEST_CLI_REQUEST = [
-    # (U_G_R, U_200),
-    # (U_BNG, U_405),
-    # (U_BNH, U_400),
-    # (U_BNP, U_400),
-    # (U_BWP, U_505),
-    # (U_BNC, U_400),
-]
-
-
 ERR_CODES = [n for n in HTTP_CODES.keys() if n >= 400]
 
 
 SAMPLE_TXT = ('This is a very simple text file.\n'
               'Just to show that we can serve it up.\n'
               'It is three lines long.\n')
-
-
-# @pytest.mark.parametrize('msg', TESTS)
-# def test_system(msg):
-#     """Test that messages to server are returned as the same message."""
-#     from client import client
-#     assert client(msg) == msg
 
 
 # @pytest.mark.parametrize('cli_request, msg', TEST_CLI_REQUEST)
@@ -147,21 +119,19 @@ SAMPLE_TXT = ('This is a very simple text file.\n'
 #     assert '' in response_parts
 
 
-# @pytest.mark.parametrize('cli_request, error, msg, uri', TEST_PARSE)
 def test_parse_request(make_request):
     """Test that parse_request returns the URI or raises appropriate error."""
     from server import parse_request
-    request, code, error, uri = make_request
+    request, code, error, uri_response = make_request
 
     if error:
         try:
             parse_request(request)
             assert False  # If test reaches here, it has failed to raise error.
         except ValueError as e:
-            print(e.args)
             assert e.args[0] == code
     else:
-        assert parse_request(request) == uri
+        assert parse_request(request) == uri_response
 
 
 def test_response_ok():
@@ -179,6 +149,17 @@ def test_response_error(err_code):
     response = response_error(err_code)
     first_line = response.split(CRLF)[0]
     assert first_line == ' '.join((HTTP1_1, HTTP_CODES[err_code]))
+
+
+def test_join_uri(uri):
+    """Test that webroot is accessible."""
+    from server import join_uri
+    uri_in, code, uri_out = uri
+    assert join_uri(uri_in).endswith(uri_out)
+
+
+def test_resolve_uri():
+    pass
 
 
 def test_webroot():

@@ -10,7 +10,12 @@ import time
 
 BUFFER_LENGTH = 8
 ADDRINFO = ('127.0.0.1', 5000)
-WEBROOT_PATH = os.path.join('..', 'webroot')
+
+PARENT_DIR = os.path.abspath(os.path.dirname(__file__))
+GRANDPARENT_DIR = os.path.abspath(os.path.join(PARENT_DIR, '..'))
+WEBROOT_PATH = os.path.abspath(os.path.join(GRANDPARENT_DIR, 'webroot'))
+
+HTTP_PATH = __file__
 
 # Unicode constants for standard re-usable parts.
 CRLF = '\r\n'
@@ -19,6 +24,9 @@ HTTP1_1 = 'HTTP/1.1'
 HOST = 'Host: '
 CONTENT_TYPE = 'Content-Type: {}'
 CONTENT_LENGTH = 'Content-Length: {}'
+
+TEXT_HTML = 'text/html'
+TEXT_PLAIN = 'text/plain'
 
 # Easy Reference dictionary with int keys for code/message part.
 HTTP_CODES = {
@@ -46,7 +54,7 @@ HTML_TEMPLATE = '''
                 </html>
                 '''
 HTML_LI_TEMPLATE = '''
-                   <li><a href="{uri_path}">{uri_path}</a></li>
+                   <li><a href="{full_path}">{short_path}</a></li>
                    '''
 
 
@@ -74,15 +82,16 @@ def server():
             print('Request received:\n{}'.format(request))
             try:
                 uri = parse_request(request)
+                # Here body is already a bytestring -- might be an image.
                 body, body_type = resolve_uri(uri)
-                # Here body might be HTML/text or image bytes.
                 body_length = len(body)
-                response = response_ok(body_type, body_length)
+                response_headers = response_ok(body_type, body_length)
 
             except ValueError as e:
-                response = response_error(*e.args)
+                response_headers = response_error(*e.args)
+                body = b''
             # Only re-encode into bytes on the way out.
-            response = response.encode('utf-8') + body
+            response = b''.join([response_headers.encode('utf-8'), body])
             conn.sendall(response)
             conn.close()
             time.sleep(0.01)
@@ -100,39 +109,29 @@ def server():
 
 def parse_request(request):
     """Parse client request."""
-    # only accept GET
-    # only HTTP/1.1
-    # validate that proper Host: header was specified
-    # other requests raise appropriate Python error
-    # if no conditions arise, should return the URI
     method = ''
     uri = ''
     protocol = ''
     headers = ''
 
+    # I was able to simplify this into one try/except block.
+    # The key was to organize it by error type.
     try:
         headers, body = request.split(CRLF * 2)
-    except ValueError:
-        raise ValueError(400)
-
-    try:
         headers = headers.split(CRLF)
-        first_line = headers[0]
-    except (ValueError, IndexError):
-        raise ValueError(400)
-
-    try:
+        try:
+            first_line = headers[0]
+        except IndexError:
+            raise ValueError(400)
         method, uri, protocol = first_line.split()
+        headers = headers[1:]
+        for h in headers:
+            if h.startswith(HOST):
+                break
+        else:
+            raise ValueError(400)
     except ValueError:
         raise ValueError(400)
-
-    headers = headers[1:]
-    for h in headers:
-        if h.startswith(HOST):
-            break
-    else:
-        raise ValueError(400)
-
     if method != GET:
         raise ValueError(405)
     if protocol != HTTP1_1:
@@ -142,41 +141,52 @@ def parse_request(request):
 
 
 def resolve_uri(uri):
-    """Return a tuple containing content and content type."""
-    print(u'URI: ', uri)
-    uri = os.path.join(*uri.split(b'/'))
-    uri = os.path.join(WEBROOT_PATH, uri)
+    """Return a tuple containing content AS BYTES and content type."""
+    print('Requested URI: ', uri)
+    print('WEBROOT_PATH:', WEBROOT_PATH)
+
+    uri = full_uri(uri)
+    print('URI after join: ', uri)
+
     if os.path.isfile(uri):
-        print(u'uri:', uri)
-        f = io.open(uri)
-        body = f.read().encode('utf-8')
-        print(u'body_type:', type(body))
-        f.close()
-        body_type = mimetypes.guess_type(uri.decode('utf-8'))
-        print(u'body_type:', body_type)
-        body_type = body_type[0].encode('utf-8')
-        print(u'body_type:', body_type)
+        print('uri:', uri)
+        body_type = mimetypes.guess_type(uri)[0]
+        body = read_file_bytes(uri)
 
     elif os.path.isdir(uri):
-        body_type = b'text/html'
-        if platform.system() == 'Windows':
-            # convert bytestring URI to unicode URI for windows servers
-            # windows requires a unicode string in URI for next(os.walk(uri))
-            print(u'windows?', platform.system())
-            print(u'Windows uri:', uri)
-            uri = uri.decode('utf-8')
-            print(u'Windows uri:', uri)
-        walker = os.walk(uri)
-        print(u'Walk URI:', walker)
-        print(u'Walk URI:', next(walker))
+        body_type = TEXT_HTML
+        print('windows?', platform.system())
         body = display(next(os.walk(uri)))
+        body = body.encode('utf-8')
         print(u'body:', type(body))
     else:
+        print(uri, 'is not a file or dir.')
         raise ValueError(404)
     return (body, body_type)
 
 
-# response_ok doesn't parse body (might be bytes as for an image).
+# Hopefully update this using a reference to __file__
+def full_uri(uri):
+    """Take a unicode uri from webroot and return the absolute path."""
+    uri = os.path.join(*uri.split('/'))
+    uri = os.path.join(WEBROOT_PATH, uri)
+    return uri
+
+
+def web_uri(uri):
+    """Take a unicode uri and return the uri from webroot."""
+    return uri.replace(WEBROOT_PATH, '')
+
+
+def read_file_bytes(path):
+    """Return the data in bytestring format from the file at a give path."""
+    f = io.open(path, 'rb')
+    data = f.read()
+    f.close()
+    return data
+
+
+# Response_ok doesn't parse body (might be bytes as for an image).
 # References key 200 from HTTP_CODES reference dictionary.
 def response_ok(body_type, body_length):
     """Return 'HTTP/1.1 200 OK' for when connection ok."""
@@ -186,33 +196,35 @@ def response_ok(body_type, body_length):
                      CRLF])
 
 
-# response_error take an int as err_code, to reference HTTP_CODES dict.
+# Response_error take an int as err_code, to reference HTTP_CODES dict.
 def response_error(err_code):
     """Return 'Internal Server Error' for when problem occurs."""
     return CRLF.join([' '.join([HTTP1_1, HTTP_CODES[err_code]]),
                      CONTENT_TYPE.format('text/plain'),
-                     CRLF])
-    # return (b'HTTP/1.1 %s\r\n'
-    #         b'Content-Type: text/plain\r\n'
-    #         b'\r\n'
-    #         b'Death Star Error.  Please build again.\n'
-    #         b'%s\r\n') % (err_msg, err_msg)
+                     CRLF,
+                     HTTP_CODES[err_code]])
 
 
 def display(threeple):
     """Split dir threeple into components and return as HTML."""
     print(u'Entering Display...')
-    print(u'threeple:', type(threeple))
+
     print(u'threeple:', threeple)
     cur_dir, dir_subdir, dir_files = threeple
     print(u'cur_dir:', cur_dir)
     print(u'dir_subdir:', dir_subdir)
     print(u'dir_files:', dir_files)
-    dir_li = []
+
+    cur_dir = web_uri(cur_dir)
+    print('cur_dir after web_dir', cur_dir)
+    dir_list = []
     for i in dir_subdir + dir_files:
-        html_li = HTML_LI_TEMPLATE % (i.encode('utf-8'), i.encode('utf-8'))
-        dir_li.append(html_li)
-    return HTML_TEMPLATE % (cur_dir.encode('utf-8'), b''.join(dir_li))
+        full_path = os.path.join(cur_dir, i)
+        html_li = HTML_LI_TEMPLATE.format(full_path=full_path, short_path=i)
+        dir_list.append(html_li)
+
+    return HTML_TEMPLATE.format(header=cur_dir,
+                                list_items=''.join(dir_list))
 
 
 if __name__ == '__main__':
