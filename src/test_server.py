@@ -3,7 +3,7 @@
 import os
 import pytest
 import server as ser
-from server import CRLF, HTTP1_1, HTTP_CODES, TEXT_HTML, TEXT_PLAIN
+from server import CRLF, HTTP1_1, HTTP_CODES
 
 WEBROOT_STUB = '/http-server/webroot/'
 
@@ -52,31 +52,37 @@ BODIES = [
 
 @pytest.fixture(scope='function', params=METHODS)
 def method(request):
+    """Establish fixtures for the method part of test HTTP requests."""
     return request.param
 
 
 @pytest.fixture(scope='function', params=URIS)
 def uri(request):
+    """Establish fixtures for the URI part of test HTTP requests."""
     return request.param
 
 
 @pytest.fixture(scope='function', params=PROTOS)
 def proto(request):
+    """Establish fixtures for the protocol part of test HTTP requests."""
     return request.param
 
 
 @pytest.fixture(scope='function', params=HEADERS)
 def headers(request):
+    """Establish fixtures for the headers part of test HTTP requests."""
     return request.param
 
 
 @pytest.fixture(scope='function', params=EMPTY_LINES)
 def empty_line(request):
+    """Establish fixtures for the empty line in test HTTP requests."""
     return request.param
 
 
 @pytest.fixture(scope='function', params=BODIES)
 def body(request):
+    """Establish fixtures for the content body of test HTTP requests."""
     return request.param
 
 
@@ -111,7 +117,7 @@ SAMPLE_TXT = ('This is a very simple text file.\r\n'
 
 # @pytest.mark.parametrize('cli_request, msg', TEST_CLI_REQUEST)
 # def test_system(cli_request, msg):
-#     """Test that messages to server are returned as the same message."""
+#     """Test that messages send to the server get appropriate response."""
 #     from client import client
 #     response = client(cli_request)
 #     response_parts = response.split('\r\n')
@@ -158,8 +164,10 @@ def test_join_uri(uri):
     assert full_uri(uri_in).endswith(uri_out)
 
 
-def test_resolve_uri():
-    pass
+# def test_resolve_uri():
+#     """Test that resolve_uri returns content in bytes and content-type."""
+#     body, content_type = b'', ''
+#     assert isinstance(body, bytes)
 
 
 def test_webroot():

@@ -88,10 +88,17 @@ def server():
                 response_headers = response_ok(body_type, body_length)
 
             except ValueError as e:
-                response_headers = response_error(*e.args)
-                body = b''
+                err_code = e.args[0]
+                response_headers = response_error(err_code)
+                body = HTTP_CODES[err_code]
+
             # Only re-encode into bytes on the way out.
-            response = b''.join([response_headers.encode('utf-8'), body])
+            if not isinstance(response_headers, bytes):
+                response_headers = response_headers.encode('utf-8')
+            if not isinstance(body, bytes):
+                body = body.encode('utf-8')
+            response = b''.join([response_headers, body])
+
             conn.sendall(response)
             conn.close()
             time.sleep(0.01)
@@ -141,7 +148,7 @@ def parse_request(request):
 
 
 def resolve_uri(uri):
-    """Return a tuple containing content AS BYTES and content type."""
+    """Return a tuple containing content and content type."""
     print('Requested URI: ', uri)
     print('WEBROOT_PATH:', WEBROOT_PATH)
 
@@ -157,7 +164,6 @@ def resolve_uri(uri):
         body_type = TEXT_HTML
         print('windows?', platform.system())
         body = display(next(os.walk(uri)))
-        body = body.encode('utf-8')
         print(u'body:', type(body))
     else:
         print(uri, 'is not a file or dir.')
