@@ -28,8 +28,8 @@ HOST = 'Host: '
 CONTENT_TYPE = 'Content-Type: {}'
 CONTENT_LENGTH = 'Content-Length: {}'
 
-TEXT_HTML = 'text/html'
-TEXT_PLAIN = 'text/plain'
+TEXT_HTML = 'text/html; charset=utf-8'
+TEXT_PLAIN = 'text/plain; charset=utf-8'
 
 # Easy Reference dictionary with int keys for code/message part.
 HTTP_CODES = {
@@ -100,21 +100,19 @@ def http_server(conn, addr):
     print('Request received:\n{}'.format(request))
     try:
         uri = parse_request(request)
-        # Here body is already a bytestring -- might be an image.
-        body, body_type = resolve_uri(uri)
+        # Here body might be a bytestring.
+        body, content_type = resolve_uri(uri)
         body_length = len(body)
-        response_headers = response_ok(body_type, body_length)
+        response_headers = response_ok(content_type, body_length)
 
     except ValueError as e:
         err_code = e.args[0]
         response_headers = response_error(err_code)
-        body = HTTP_CODES[err_code]
+        body = HTTP_CODES[err_code].encode('utf-8')
 
-    # Only re-encode into bytes on the way out.
-    if not isinstance(response_headers, bytes):
-        response_headers = response_headers.encode('utf-8')
-    if not isinstance(body, bytes):
-        body = body.encode('utf-8')
+    # Re-encode into bytes on the way out.
+    response_headers = response_headers.encode('utf-8')
+
     response = b''.join([response_headers, body])
 
     conn.sendall(response)
@@ -156,29 +154,25 @@ def parse_request(request):
 
 
 def resolve_uri(uri):
-    """Return a tuple containing content and content type."""
+    """Return tuple of content and content type, or raise 404 error."""
     print('Requested URI: ', uri)
-    print('WEBROOT_PATH:', WEBROOT_PATH)
-
     uri = full_uri(uri)
     print('URI after join: ', uri)
 
     if os.path.isfile(uri):
-        print('uri:', uri)
-        body_type = mimetypes.guess_type(uri)[0]
+        content_type = mimetypes.guess_type(uri)[0]
         body = read_file_bytes(uri)
 
     elif os.path.isdir(uri):
-        body_type = TEXT_HTML
+        content_type = TEXT_HTML
         body = display(next(os.walk(uri)))
-        print(u'body:', type(body))
+        body = body.encode('utf-8')
     else:
         print(uri, 'is not a file or dir.')
         raise ValueError(404)
-    return (body, body_type)
+    return (body, content_type)
 
 
-# Hopefully update this using a reference to __file__
 def full_uri(uri):
     """Take a unicode uri from webroot and return the absolute path."""
     uri = os.path.join(*uri.split('/'))
@@ -201,10 +195,10 @@ def read_file_bytes(path):
 
 # Response_ok doesn't parse body (might be bytes as for an image).
 # References key 200 from HTTP_CODES reference dictionary.
-def response_ok(body_type, body_length):
+def response_ok(content_type, body_length):
     """Return 'HTTP/1.1 200 OK' for when connection ok."""
     return CRLF.join([' '.join([HTTP1_1, HTTP_CODES[200]]),
-                     CONTENT_TYPE.format(body_type),
+                     CONTENT_TYPE.format(content_type),
                      CONTENT_LENGTH.format(body_length),
                      CRLF])
 
@@ -213,7 +207,7 @@ def response_ok(body_type, body_length):
 def response_error(err_code):
     """Return 'Internal Server Error' for when problem occurs."""
     return CRLF.join([' '.join([HTTP1_1, HTTP_CODES[err_code]]),
-                     CONTENT_TYPE.format('text/plain'),
+                     CONTENT_TYPE.format(TEXT_PLAIN),
                      CRLF])
 
 

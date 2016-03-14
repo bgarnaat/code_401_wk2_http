@@ -164,16 +164,18 @@ def test_join_uri(uri):
     assert full_uri(uri_in) == uri_out
 
 
-# def test_resolve_uri():
-#     """Test that resolve_uri returns content in bytes and content-type."""
-#     body, content_type = b'', ''
-#     assert isinstance(body, bytes)
+def test_resolve_uri(uri):
+    """Test that resolve_uri returns content and content-type."""
+    from server import resolve_uri
+    uri_in, code, uri_out = uri
+    body, content_type = resolve_uri(uri_in)
+    assert isinstance(body, bytes)
 
 
 def test_webroot():
     """Test that webroot is accessible."""
     from server import WEBROOT_PATH, read_file_bytes
-    from os.path import join
-    sample_path = join(WEBROOT_PATH, 'sample.txt')
+    import os
+    sample_path = os.path.join(WEBROOT_PATH, 'sample.txt')
     data = read_file_bytes(sample_path)
     assert data.decode('utf-8') == SAMPLE_TXT
