@@ -8,14 +8,18 @@ import socket
 import sys
 import time
 
+
+# def abs_join(*args):
+#     """Return the full absolute path of two joined path items."""
+#     return os.path.abspath(os.path.join(*args))
+
+
 BUFFER_LENGTH = 8
 ADDRINFO = ('127.0.0.1', 5000)
 
-PARENT_DIR = os.path.abspath(os.path.dirname(__file__))
-GRANDPARENT_DIR = os.path.abspath(os.path.join(PARENT_DIR, '..'))
-WEBROOT_PATH = os.path.abspath(os.path.join(GRANDPARENT_DIR, 'webroot'))
-
-HTTP_PATH = __file__
+PARENT_DIR = os.path.dirname(__file__)
+GRANDPARENT_DIR = os.path.join(PARENT_DIR, '..')
+WEBROOT_PATH = os.path.join(GRANDPARENT_DIR, 'webroot', '')
 
 # Unicode constants for standard re-usable parts.
 CRLF = '\r\n'
