@@ -3,9 +3,9 @@
 import os
 import pytest
 import server as ser
-from server import CRLF, HTTP1_1, HTTP_CODES
+from server import WEBROOT_PATH, CRLF, HTTP1_1, HTTP_CODES
 
-WEBROOT_STUB = '/http-server/webroot/'
+print(WEBROOT_PATH)
 
 METHODS = [
     ('GET', 200),
@@ -15,12 +15,11 @@ METHODS = [
 ]
 
 URIS = [
-    ('/', 200, WEBROOT_STUB),
-    ('/a_web_page.html', 200, os.path.join(WEBROOT_STUB, '/a_web_page.html')),
-    ('/images', 200, os.path.join(WEBROOT_STUB, '/images')),
-    ('/images/sample_1.png', 200, os.path.join(WEBROOT_STUB,
-                                               '/images/sample_1.png')),
-    ('', 400, ''),
+    ('/', 200, WEBROOT_PATH),
+    ('/a_web_page.html', 200, os.path.join(WEBROOT_PATH, 'a_web_page.html')),
+    ('/images', 200, os.path.join(WEBROOT_PATH, 'images')),
+    ('/images/sample_1.png', 200, os.path.join(WEBROOT_PATH, 'images', 'sample_1.png')),
+    ('', 400, WEBROOT_PATH),
 ]
 
 PROTOS = [
@@ -32,7 +31,7 @@ PROTOS = [
 
 HEADERS = [
     ('Host: example.com', 200),
-    ('Host: example.com' + ser.CRLF + 'Content-Type: text/html', 200),
+    ('Host: example.com' + CRLF + 'Content-Type: text/html', 200),
     ('Host example.com', 400),
     ('', 400),
 ]
@@ -50,43 +49,43 @@ BODIES = [
 ]
 
 
-@pytest.fixture(scope='function', params=METHODS)
+@pytest.fixture(scope='module', params=METHODS)
 def method(request):
     """Establish fixtures for the method part of test HTTP requests."""
     return request.param
 
 
-@pytest.fixture(scope='function', params=URIS)
+@pytest.fixture(scope='module', params=URIS)
 def uri(request):
     """Establish fixtures for the URI part of test HTTP requests."""
     return request.param
 
 
-@pytest.fixture(scope='function', params=PROTOS)
+@pytest.fixture(scope='module', params=PROTOS)
 def proto(request):
     """Establish fixtures for the protocol part of test HTTP requests."""
     return request.param
 
 
-@pytest.fixture(scope='function', params=HEADERS)
+@pytest.fixture(scope='module', params=HEADERS)
 def headers(request):
     """Establish fixtures for the headers part of test HTTP requests."""
     return request.param
 
 
-@pytest.fixture(scope='function', params=EMPTY_LINES)
+@pytest.fixture(scope='module', params=EMPTY_LINES)
 def empty_line(request):
     """Establish fixtures for the empty line in test HTTP requests."""
     return request.param
 
 
-@pytest.fixture(scope='function', params=BODIES)
+@pytest.fixture(scope='module', params=BODIES)
 def body(request):
     """Establish fixtures for the content body of test HTTP requests."""
     return request.param
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='module')
 def make_request(method, uri, proto, headers, empty_line, body):
     """Create many different requests to check for correct response."""
     expected_code = 200
@@ -110,17 +109,18 @@ def make_request(method, uri, proto, headers, empty_line, body):
 ERR_CODES = [n for n in HTTP_CODES.keys() if n >= 400]
 
 
-SAMPLE_TXT = ('This is a very simple text file.\r\n'
-              'Just to show that we can serve it up.\r\n'
-              'It is three lines long.\r\n')
+SAMPLE_TXT = os.linesep.join(['This is a very simple text file.',
+                              'Just to show that we can serve it up.',
+                              'It is three lines long.',
+                              ''])
 
 
-# @pytest.mark.parametrize('cli_request, msg', TEST_CLI_REQUEST)
-# def test_system(cli_request, msg):
+# def test_system(make_request, msg):
 #     """Test that messages send to the server get appropriate response."""
 #     from client import client
+#     request, code, error, uri_response = make_request
 #     response = client(cli_request)
-#     response_parts = response.split('\r\n')
+#     response_parts = response.split(CRLF)
 #     assert response_parts[0] == msg
 #     assert '' in response_parts
 
@@ -161,7 +161,7 @@ def test_join_uri(uri):
     """Test that webroot is accessible."""
     from server import full_uri
     uri_in, code, uri_out = uri
-    assert full_uri(uri_in).endswith(uri_out)
+    assert full_uri(uri_in) == uri_out
 
 
 # def test_resolve_uri():
