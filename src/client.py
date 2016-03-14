@@ -14,14 +14,15 @@ def client(msg):
     cli_sock = socket.socket(*stream_info[:3])
     cli_sock.connect(stream_info[-1])
 
-    cli_sock.sendall(msg.encode('utf8'))
+    cli_sock.sendall(msg.encode('utf-8'))
     cli_sock.shutdown(socket.SHUT_WR)
-    response = ''
+    response_parts = []
     while True:
         part = cli_sock.recv(BUFFER_LENGTH)
-        response += part.decode('utf-8')
+        response_parts.append(part)
         if len(part) < BUFFER_LENGTH:
             break
+    response = b''.join(response_parts).decode('utf-8')
     cli_sock.close()
     return response
 

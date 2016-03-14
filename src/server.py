@@ -178,8 +178,7 @@ def response_error(err_code):
     """Return 'Internal Server Error' for when problem occurs."""
     return CRLF.join([' '.join([HTTP1_1, HTTP_CODES[err_code]]),
                      CONTENT_TYPE.format('text/plain'),
-                     CRLF,
-                     HTTP_CODES[err_code]])
+                     CRLF])
 
 
 def display(threeple):
