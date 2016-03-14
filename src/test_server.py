@@ -2,8 +2,8 @@
 """Test module for client and server modules."""
 import os
 import pytest
-import server as ser
 from server import WEBROOT_PATH, CRLF, HTTP1_1, HTTP_CODES
+from server import CONTENT_TYPE, TEXT_HTML
 
 WEBROOT_STUB = os.path.join('', 'webroot', '')
 
@@ -23,7 +23,7 @@ URIS = [
 ]
 
 PROTOS = [
-    (ser.HTTP1_1, 200),
+    (HTTP1_1, 200),
     ('HTTP/1.0', 505),
     ('jhdo%#@#4939', 505),
     ('', 400),
@@ -31,7 +31,7 @@ PROTOS = [
 
 HEADERS = [
     ('Host: example.com', 200),
-    ('Host: example.com' + CRLF + 'Content-Type: text/html', 200),
+    ('Host: example.com' + CRLF + CONTENT_TYPE.format(TEXT_HTML), 200),
     ('Host example.com', 400),
     ('', 400),
 ]
