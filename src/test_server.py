@@ -18,7 +18,7 @@ URIS = [
     ('/', 200, WEBROOT_PATH),
     ('/a_web_page.html', 200, os.path.join(WEBROOT_PATH, 'a_web_page.html')),
     ('/images', 200, os.path.join(WEBROOT_PATH, 'images')),
-    ('/images/sample_1.png', 200, os.path.join(WEBROOT_PATH, 'images', 'sample_1.png')),
+    ('/sample.txt', 200, os.path.join(WEBROOT_PATH, 'sample.txt')),
     ('', 400, WEBROOT_PATH),
 ]
 
@@ -115,14 +115,14 @@ SAMPLE_TXT = os.linesep.join(['This is a very simple text file.',
                               ''])
 
 
-# def test_system(make_request, msg):
-#     """Test that messages send to the server get appropriate response."""
-#     from client import client
-#     request, code, error, uri_response = make_request
-#     response = client(cli_request)
-#     response_parts = response.split(CRLF)
-#     assert response_parts[0] == msg
-#     assert '' in response_parts
+def test_system(make_request):
+    """Test that messages send to the server get appropriate response."""
+    from client import client
+    request, code, error, uri_response = make_request
+    response = client(request)
+    response_parts = response.split(CRLF)
+    assert response_parts[0] == ' '.join([HTTP1_1, HTTP_CODES[code]])
+    assert '' in response_parts
 
 
 def test_parse_request(make_request):
