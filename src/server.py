@@ -3,7 +3,6 @@
 import io
 import mimetypes
 import os
-import platform
 import socket
 import sys
 import time
@@ -13,7 +12,7 @@ ADDRINFO = ('127.0.0.1', 5000)
 
 PARENT_DIR = os.path.abspath(os.path.dirname(__file__))
 GRANDPARENT_DIR = os.path.abspath(os.path.join(PARENT_DIR, '..'))
-WEBROOT_PATH = os.path.abspath(os.path.join(GRANDPARENT_DIR, 'webroot'))
+WEBROOT_PATH = os.path.abspath(os.path.join(GRANDPARENT_DIR, 'webroot', ''))
 
 HTTP_PATH = __file__
 
@@ -70,38 +69,7 @@ def server():
     try:
         while True:
             conn, addr = serv_sock.accept()
-            request_parts = []
-            while True:
-                part = conn.recv(BUFFER_LENGTH)
-                request_parts.append(part)
-                if len(part) < BUFFER_LENGTH:
-                    break
-            # Immediately decode all of incoming request into unicode.
-            # In future, may need to check Content-type of incoming request?
-            request = b''.join(request_parts).decode('utf-8')
-            print('Request received:\n{}'.format(request))
-            try:
-                uri = parse_request(request)
-                # Here body is already a bytestring -- might be an image.
-                body, body_type = resolve_uri(uri)
-                body_length = len(body)
-                response_headers = response_ok(body_type, body_length)
-
-            except ValueError as e:
-                err_code = e.args[0]
-                response_headers = response_error(err_code)
-                body = HTTP_CODES[err_code]
-
-            # Only re-encode into bytes on the way out.
-            if not isinstance(response_headers, bytes):
-                response_headers = response_headers.encode('utf-8')
-            if not isinstance(body, bytes):
-                body = body.encode('utf-8')
-            response = b''.join([response_headers, body])
-
-            conn.sendall(response)
-            conn.close()
-            time.sleep(0.01)
+            http_server(conn, addr)
     except Exception as e:
         print(e.msg)
     finally:
@@ -162,7 +130,6 @@ def resolve_uri(uri):
 
     elif os.path.isdir(uri):
         body_type = TEXT_HTML
-        print('windows?', platform.system())
         body = display(next(os.walk(uri)))
         print(u'body:', type(body))
     else:
@@ -217,12 +184,49 @@ def display(threeple):
     cur_dir = web_uri(cur_dir)
     dir_list = []
     for i in dir_subdir + dir_files:
+        if i.startswith('._'):
+            continue
         full_path = os.path.join(cur_dir, i)
         html_li = HTML_LI_TEMPLATE.format(full_path=full_path, short_path=i)
         dir_list.append(html_li)
 
     return HTML_TEMPLATE.format(header=cur_dir,
                                 list_items=''.join(dir_list))
+
+
+def http_server(conn, addr):
+    request_parts = []
+    while True:
+        part = conn.recv(BUFFER_LENGTH)
+        request_parts.append(part)
+        if len(part) < BUFFER_LENGTH:
+            break
+    # Immediately decode all of incoming request into unicode.
+    # In future, may need to check Content-type of incoming request?
+    request = b''.join(request_parts).decode('utf-8')
+    print('Request received:\n{}'.format(request))
+    try:
+        uri = parse_request(request)
+        # Here body is already a bytestring -- might be an image.
+        body, body_type = resolve_uri(uri)
+        body_length = len(body)
+        response_headers = response_ok(body_type, body_length)
+
+    except ValueError as e:
+        err_code = e.args[0]
+        response_headers = response_error(err_code)
+        body = HTTP_CODES[err_code]
+
+    # Only re-encode into bytes on the way out.
+    if not isinstance(response_headers, bytes):
+        response_headers = response_headers.encode('utf-8')
+    if not isinstance(body, bytes):
+        body = body.encode('utf-8')
+    response = b''.join([response_headers, body])
+
+    conn.sendall(response)
+    conn.close()
+    time.sleep(0.01)
 
 
 if __name__ == '__main__':

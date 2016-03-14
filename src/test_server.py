@@ -5,7 +5,7 @@ import pytest
 import server as ser
 from server import CRLF, HTTP1_1, HTTP_CODES
 
-WEBROOT_STUB = '/http-server/webroot/'
+WEBROOT_STUB = os.path.join('', 'webroot', '')
 
 METHODS = [
     ('GET', 200),
@@ -16,10 +16,10 @@ METHODS = [
 
 URIS = [
     ('/', 200, WEBROOT_STUB),
-    ('/a_web_page.html', 200, os.path.join(WEBROOT_STUB, '/a_web_page.html')),
-    ('/images', 200, os.path.join(WEBROOT_STUB, '/images')),
+    ('/a_web_page.html', 200, os.path.join(WEBROOT_STUB, 'a_web_page.html')),
+    ('/images', 200, os.path.join(WEBROOT_STUB, 'images')),
     ('/images/sample_1.png', 200, os.path.join(WEBROOT_STUB,
-                                               '/images/sample_1.png')),
+                                               'images', 'sample_1.png')),
     ('', 400, ''),
 ]
 
@@ -110,9 +110,10 @@ def make_request(method, uri, proto, headers, empty_line, body):
 ERR_CODES = [n for n in HTTP_CODES.keys() if n >= 400]
 
 
-SAMPLE_TXT = ('This is a very simple text file.\r\n'
-              'Just to show that we can serve it up.\r\n'
-              'It is three lines long.\r\n')
+SAMPLE_TXT = os.linesep.join(['This is a very simple text file.',
+                              'Just to show that we can serve it up.',
+                              'It is three lines long.',
+                              ''])
 
 
 # @pytest.mark.parametrize('cli_request, msg', TEST_CLI_REQUEST)
